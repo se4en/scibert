@@ -2,6 +2,8 @@
   "random_seed": std.parseInt(std.extVar("SEED")),
   "pytorch_seed": std.parseInt(std.extVar("PYTORCH_SEED")),
   "numpy_seed": std.parseInt(std.extVar("NUMPY_SEED")),
+  "mixing_ratio": 0.06,
+  "mixing_ratio2": 0.21,
   "dataset_reader": {
     "type": "classification_dataset_reader",
      "token_indexers": {
@@ -13,12 +15,36 @@
       }
     }
   },
+  "dataset_reader_aux": {
+    "type": "aclarc_section_title_data_reader",
+     "token_indexers": {
+      "bert": {
+          "type": "bert-pretrained",
+          "pretrained_model": std.extVar("BERT_VOCAB"),
+          "do_lowercase": std.extVar("IS_LOWERCASE"),
+          "use_starting_offsets": true
+      }
+    }
+  },
+  "dataset_reader_aux2": {
+    "type": "aclarc_cite_worthiness_data_reader",
+    "token_indexers": {
+      "bert": {
+        "type": "bert-pretrained",
+        "pretrained_model": std.extVar("BERT_VOCAB"),
+        "do_lowercase": std.extVar("IS_LOWERCASE"),
+        "use_starting_offsets": true
+      }
+    }
+  },
   "train_data_path": std.extVar("TRAIN_PATH"),
   "validation_data_path": std.extVar("DEV_PATH"),
   "test_data_path": std.extVar("TEST_PATH"),
+  "train_data_path_aux": std.extVar("AUX_PATH"),
+  "train_data_path_aux2": std.extVar("AUX_2_PATH"),
   "evaluate_on_test": true,
   "model": {
-    "type": "bert_text_classifier",
+    "type": "bert_multitask_text_classifier",
     "verbose_metrics": true,
     "text_field_embedder": {
         "allow_unmatched_keys": true,
@@ -36,6 +62,18 @@
     }
   },
   "iterator": {
+    "type": "bucket",
+    "sorting_keys": [["text", "num_tokens"]],
+    "batch_size": std.parseInt(std.extVar("GRAD_ACCUM_BATCH_SIZE")) / 2,
+    "cache_instances": true
+  },
+  "iterator_aux": {
+    "type": "bucket",
+    "sorting_keys": [["text", "num_tokens"]],
+    "batch_size": std.parseInt(std.extVar("GRAD_ACCUM_BATCH_SIZE")) / 2,
+    "cache_instances": true
+  },
+  "iterator_aux2": {
     "type": "bucket",
     "sorting_keys": [["text", "num_tokens"]],
     "batch_size": std.parseInt(std.extVar("GRAD_ACCUM_BATCH_SIZE")) / 2,
