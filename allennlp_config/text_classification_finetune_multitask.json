@@ -4,6 +4,8 @@
   "numpy_seed": std.parseInt(std.extVar("NUMPY_SEED")),
   "mixing_ratio": 0.06,
   "mixing_ratio2": 0.21,
+  "cutoff_epoch": 1,
+  "unfreeze_epoch": -1,
   "dataset_reader": {
     "type": "classification_dataset_reader",
      "token_indexers": {
@@ -55,8 +57,8 @@
             "bert": {
                 "type": "bert-pretrained",
                 "pretrained_model": std.extVar("BERT_WEIGHTS"),
-                "requires_grad": true,//'all',
-                "top_layer_only": true
+                "requires_grad": true,
+                "top_layer_only": false
             }
         }
     }
@@ -84,7 +86,7 @@
         "type": "bert_adam",
         "lr": std.extVar("LEARNING_RATE"),
         "parameter_groups": [
-          [["bias", "LayerNorm.bias", "LayerNorm.weight", "layer_norm.weight"], {"weight_decay": 0.0}]
+          [["text_field_embedder"], {"weight_decay": 0.0}]
         ]
     },
     "validation_metric": "+average_F1",
@@ -94,7 +96,8 @@
     "learning_rate_scheduler": {
       "type": "slanted_triangular",
       "num_epochs": std.parseInt(std.extVar("NUM_EPOCHS")),
-      "num_steps_per_epoch": std.parseInt(std.extVar("DATASET_SIZE")) / std.parseInt(std.extVar("GRAD_ACCUM_BATCH_SIZE"))
+      "num_steps_per_epoch": std.parseInt(std.extVar("DATASET_SIZE")) / std.parseInt(std.extVar("GRAD_ACCUM_BATCH_SIZE")),
+      //"gradual_unfreezing": true
     },
     //"gradient_accumulation_batch_size": std.parseInt(std.extVar("GRAD_ACCUM_BATCH_SIZE")),
     "cuda_device": std.parseInt(std.extVar("CUDA_DEVICE"))

@@ -170,6 +170,7 @@ class MultiTaskTrainer2:
                  mixing_ratio: float = 0.17,
                  mixing_ratio2: float = 0.17,
                  cutoff_epoch: int = -1,
+                 unfreeze_epoch: int = -1,
                  validation_dataset: Optional[Iterable[Instance]] = None,
                  validation_dataset_aux: Optional[Iterable] = None,
                  validation_dataset_aux2: Optional[Iterable[Instance]] = None,
@@ -303,6 +304,7 @@ class MultiTaskTrainer2:
         self._validation_data_aux2 = validation_dataset_aux2
 
         self._cutoff_epoch = cutoff_epoch
+        self._unfreeze_epoch = unfreeze_epoch
         self._mixing_ratio = mixing_ratio
         self._mixing_ratio2 = mixing_ratio2
         self._iterator_aux = iterator_aux
@@ -374,6 +376,14 @@ class MultiTaskTrainer2:
         else:
             self._tensorboard = TensorboardWriter()
         self._warned_tqdm_ignores_underscores = False
+
+        # for param in self._model.text_field_embedder.parameters():
+        #     print(param.name)
+        #     param.requires_grad = False 
+        # logger.info("Freeze weights")
+
+        _parameters = [[n, p] for n, p in self._model.named_parameters() if p.requires_grad]
+        logger.info(f"Number of tunable parameters: {len(_parameters)}")
 
     def _enable_gradient_clipping(self) -> None:
         if self._grad_clipping is not None:
@@ -537,6 +547,14 @@ class MultiTaskTrainer2:
             logger.info("Multitask Training")
         else:
             logger.info("Training")
+
+        if epoch > self._unfreeze_epoch:
+            for param in self._model.text_field_embedder.parameters():
+                param.requires_grad = True
+                print(param.name)
+            logger.info("Unfreeze weights")
+            _parameters = [[n, p] for n, p in self._model.named_parameters() if p.requires_grad]
+            logger.info(f"Number of tunable parameters: {len(_parameters)}")
 
         num_training_batches = self._iterator.get_num_batches(self._train_data)
         num_training_batches_aux = self._iterator_aux.get_num_batches(self._train_dataset_aux)
@@ -1094,6 +1112,7 @@ class MultiTaskTrainer2:
                     mixing_ratio: float,
                     mixing_ratio2: float,
                     cutoff_epoch: int,
+                    unfreeze_epoch: int,
                     validation_data: Optional[Iterable[Instance]],
                     validation_data_aux: Optional[Iterable[Instance]],
                     validation_data_aux2: Optional[Iterable[Instance]],
@@ -1136,6 +1155,7 @@ class MultiTaskTrainer2:
                                     mixing_ratio,
                                     mixing_ratio2,
                                     cutoff_epoch,
+                                    unfreeze_epoch,
                                     validation_data,
                                     validation_data_aux,
                                     validation_data_aux2,

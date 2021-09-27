@@ -29,10 +29,10 @@ export TEST_PATH=data/$TASK/$DATASET/test.txt
 export AUX_PATH=data/$TASK/$DATASET/scaffolds/cite-sections.jsonl
 export AUX_2_PATH=data/$TASK/$DATASET/scaffolds/cite-worthiness.jsonl
 
-export CUDA_DEVICE=-1
+export CUDA_DEVICE=0
 
-export GRAD_ACCUM_BATCH_SIZE=16
-export NUM_EPOCHS=2
-export LEARNING_RATE=0.0001
+export GRAD_ACCUM_BATCH_SIZE=32
+export NUM_EPOCHS=5
+export LEARNING_RATE=0.00002
 
 python scibert/training/train_local.py train_multitask_2 $CONFIG_FILE  --include-package scibert -s "$@"

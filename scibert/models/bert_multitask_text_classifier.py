@@ -42,6 +42,8 @@ class BertMultitaskTextClassifier(TextClassifier):
         self.classifier_feedforward_3 = torch.nn.Linear(self.text_field_embedder.get_output_dim(),
                                                         self.num_classes_cite_worthiness)
 
+        self.report_auxiliary_metrics = True
+    
         self.label_accuracy = CategoricalAccuracy()
         self.label_f1_metrics = {}
         self.label_f1_metrics_sections = {}

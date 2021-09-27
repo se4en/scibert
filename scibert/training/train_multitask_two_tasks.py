@@ -348,6 +348,7 @@ def train_model(params: Params,
     mixing_ratio2 = params.pop_float("mixing_ratio2")
 
     cutoff_epoch = params.pop("cutoff_epoch", -1)
+    unfreeze_epoch = params.pop("unfreeze_epoch", -1)    
 
     for dataset in datasets_for_vocab_creation:
         if dataset not in all_datasets:
@@ -433,6 +434,7 @@ def train_model(params: Params,
                                             mixing_ratio=mixing_ratio,
                                             mixing_ratio2=mixing_ratio2,
                                             cutoff_epoch=cutoff_epoch,
+                                            unfreeze_epoch=unfreeze_epoch,
                                             validation_data_aux=validation_data_aux,
                                             validation_data_aux2=validation_data_aux2,
                                             validation_data=validation_data,
