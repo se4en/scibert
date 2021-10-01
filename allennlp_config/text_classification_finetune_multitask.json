@@ -4,7 +4,7 @@
   "numpy_seed": std.parseInt(std.extVar("NUMPY_SEED")),
   "mixing_ratio": 0.06,
   "mixing_ratio2": 0.21,
-  "cutoff_epoch": 1,
+  "cutoff_epoch": 0,
   "unfreeze_epoch": -1,
   "dataset_reader": {
     "type": "classification_dataset_reader",
@@ -48,6 +48,7 @@
   "model": {
     "type": "bert_multitask_text_classifier",
     "verbose_metrics": true,
+    "weighted_loss": true,
     "text_field_embedder": {
         "allow_unmatched_keys": true,
         "embedder_to_indexer_map": {
@@ -61,6 +62,27 @@
                 "top_layer_only": false
             }
         }
+    }
+    "classifier_feedforward": {
+      "input_dim": 768,
+      "num_layers": 1,
+      "hidden_dims": [6,],
+      "activations": ["linear",],
+      "dropout": [0.0,]
+    },
+    "classifier_feedforward_2": {
+      "input_dim": 768,
+      "num_layers": 1,
+      "hidden_dims": [5,],
+      "activations": ["linear",],
+      "dropout": [0.0,]
+    },
+    "classifier_feedforward_3": {
+      "input_dim": 768,
+      "num_layers": 1,
+      "hidden_dims": [2,],
+      "activations": ["linear",],
+      "dropout": [0.0,]
     }
   },
   "iterator": {
@@ -84,12 +106,29 @@
   "trainer": {
     "optimizer": {
         "type": "bert_adam",
-        "lr": std.extVar("LEARNING_RATE"),
+        "lr": 0.00002, // std.extVar("LEARNING_RATE"),
         "parameter_groups": [
-          [["text_field_embedder"], {"weight_decay": 0.0}]
+          /*[["text_field_embedder.token_embedder_bert.bert_model.encoder.layer.6", 
+            "text_field_embedder.token_embedder_bert.bert_model.encoder.layer.7", 
+            "text_field_embedder.token_embedder_bert.bert_model.encoder.layer.8",
+            "text_field_embedder.token_embedder_bert.bert_model.encoder.layer.9",
+            "text_field_embedder.token_embedder_bert.bert_model.encoder.layer.10",
+            "text_field_embedder.token_embedder_bert.bert_model.encoder.layer.11"], 
+            {"weight_decay": 0.0, "lr": 0.00005}],
+          [["text_field_embedder.token_embedder_bert.bert_model.encoder.layer.0",
+           // "text_field_embedder.token_embedder_bert.bert_model.encoder.layer.1",
+            "text_field_embedder.token_embedder_bert.bert_model.encoder.layer.2",
+            "text_field_embedder.token_embedder_bert.bert_model.encoder.layer.3",
+            "text_field_embedder.token_embedder_bert.bert_model.encoder.layer.4",
+            "text_field_embedder.token_embedder_bert.bert_model.encoder.layer.5"],
+            {"weight_decay": 0.0, "lr": 0.00002}],
+          [["classifier_feedforward", "classifier_feedforward_2", "classifier_feedforward_3"],
+            {"weight_decay": 0.01, "lr": 0.001}]*/
+          [["bias", "LayerNorm.bias", "LayerNorm.weight", "layer_norm.weight"], {"weight_decay": 0.0}]
         ]
-    },
-    "validation_metric": "+average_F1",
+    }, 
+    "keep_serialized_model_every_num_seconds": 180, // 3 minutes
+    "validation_metric": "+average_F1", // "-loss"
     "num_serialized_models_to_keep": 3,
     "num_epochs": std.parseInt(std.extVar("NUM_EPOCHS")),
     "should_log_learning_rate": true,

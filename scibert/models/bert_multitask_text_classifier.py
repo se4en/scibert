@@ -1,5 +1,6 @@
 from typing import Dict, Optional, List, Any
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from allennlp.data import Vocabulary
@@ -24,7 +25,11 @@ class BertMultitaskTextClassifier(TextClassifier):
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
+                 classifier_feedforward: FeedForward,
+                 classifier_feedforward_2: FeedForward,
+                 classifier_feedforward_3: FeedForward,
                  verbose_metrics: bool = False,
+                 weighted_loss: bool = False,
                  dropout: float = 0.2,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None,
@@ -36,11 +41,26 @@ class BertMultitaskTextClassifier(TextClassifier):
         self.num_classes = self.vocab.get_vocab_size("labels")
         self.num_classes_sections = self.vocab.get_vocab_size("section_labels")
         self.num_classes_cite_worthiness = self.vocab.get_vocab_size("cite_worthiness_labels")
-        self.classifier_feedforward = torch.nn.Linear(self.text_field_embedder.get_output_dim(), self.num_classes)
-        self.classifier_feedforward_2 = torch.nn.Linear(self.text_field_embedder.get_output_dim(),
-                                                        self.num_classes_sections)
-        self.classifier_feedforward_3 = torch.nn.Linear(self.text_field_embedder.get_output_dim(),
-                                                        self.num_classes_cite_worthiness)
+
+        #self.classifier_feedforward = torch.nn.Linear(self.text_field_embedder.get_output_dim(), self.num_classes)
+        #self.classifier_feedforward_2 = torch.nn.Linear(self.text_field_embedder.get_output_dim(),
+        #                                                self.num_classes_sections)
+        #self.classifier_feedforward_3 = torch.nn.Linear(self.text_field_embedder.get_output_dim(),
+        #                                                self.num_classes_cite_worthiness)
+
+        #self.classifier_feedforward = FeedForward(input_dim=self.text_field_embedder.get_output_dim(), num_layers=2, hidden_dims=[20, self.num_classes], 
+        #                                          activations=[torch.nn.ReLU(), torch.nn.LazyLinear(self.num_classes, device=torch.device('cuda:0'))])
+        #self.classifier_feedforward_2 = FeedForward(input_dim=self.text_field_embedder.get_output_dim(), num_layers=2, 
+        #                                            hidden_dims=[20, self.num_classes_sections], 
+        #                                            activations=[torch.nn.ReLU(), torch.nn.LazyLinear(self.num_classes, device=torch.device('cuda:0'))])
+        #self.classifier_feedforward_3 = FeedForward(input_dim=self.text_field_embedder.get_output_dim(), num_layers=2, hidden_dims=[20, self.num_classes_cite_worthiness], 
+        #                                            activations=[torch.nn.ReLU(), torch.nn.LazyLinear(self.num_classes, device=torch.device('cuda:0'))])
+        
+        self.classifier_feedforward = classifier_feedforward
+        self.classifier_feedforward_2 = classifier_feedforward_2
+        self.classifier_feedforward_3 = classifier_feedforward_3
+        
+
 
         self.report_auxiliary_metrics = True
     
@@ -59,7 +79,14 @@ class BertMultitaskTextClassifier(TextClassifier):
         for i in range(self.num_classes_cite_worthiness):
             self.label_f1_metrics_cite_worthiness[vocab.get_token_from_index(index=i, namespace="cite_worthiness_labels")] =\
                 F1Measure(positive_label=i)
+
         self.loss = torch.nn.CrossEntropyLoss()
+        self.weighted_loss = weighted_loss
+
+        if self.weighted_loss:
+            weights = [0.32447342, 0.88873626, 0.92165242, 3.67613636, 4.49305556, 4.6884058]
+            class_weights = torch.FloatTensor(weights)  # .cuda()
+            self.loss_main_task = torch.nn.CrossEntropyLoss(weight=class_weights)
 
         initializer(self)
 
@@ -70,7 +97,8 @@ class BertMultitaskTextClassifier(TextClassifier):
                 citing_paper_id: Optional[str] = None,
                 cited_paper_id: Optional[str] = None,
                 section_label: Optional[torch.Tensor] = None,
-                is_citation: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+                is_citation: Optional[torch.Tensor] = None,
+                metadata: Optional[str] = None) -> Dict[str, torch.Tensor]:
         """
         Parameters
         ----------
@@ -93,13 +121,30 @@ class BertMultitaskTextClassifier(TextClassifier):
         """
         embedded_text = self.text_field_embedder(text)
         pooled = self.dropout(embedded_text[:, 0, :])
+        # TODO: add pooling flag      
+        # pooled = self.dropout(torch.mean(embedded_text, 1))
+
         if label is not None:
             logits = self.classifier_feedforward(pooled)
             class_probs = F.softmax(logits, dim=1)
+            
+            predictions = class_probs.cpu().data.numpy()
+            argmax_indices = np.argmax(predictions, axis=-1)
+            labels = [self.vocab.get_token_from_index(x, namespace="labels")
+                 for x in argmax_indices]
+            output_dict = {"probabilities": class_probs}
+            output_dict['prediction'] = labels
+            #citation_text = []
+            #print(text.keys())
+            #for batch_text in text['tokens']:
+            #    citation_text.append([self.vocab.get_token_from_index(token_id.item()) for token_id in batch_text])
+            #output_dict['citation_text'] = citation_text
 
-            output_dict = {"logits": logits}
 
-            loss = self.loss(logits, label)
+            output_dict['logits'] = logits
+            
+            # loss = self.loss(logits, label)
+            loss = self.loss_main_task(logits, label)
             output_dict["loss"] = loss
 
             # compute F1 per label
@@ -187,3 +232,30 @@ class BertMultitaskTextClassifier(TextClassifier):
             metric_dict['aux-worth--' + 'average_F1'] = average_f1
 
         return metric_dict
+
+    @classmethod
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'ScaffoldBilstmAttentionClassifier':
+
+        embedder_params = params.pop("text_field_embedder")
+        text_field_embedder = TextFieldEmbedder.from_params(embedder_params, vocab=vocab)
+
+        classifier_feedforward = FeedForward.from_params(params.pop("classifier_feedforward"))
+        classifier_feedforward_2 = FeedForward.from_params(params.pop("classifier_feedforward_2"))
+        classifier_feedforward_3 = FeedForward.from_params(params.pop("classifier_feedforward_3"))
+
+        weighted_loss = params.pop_bool("weighted_loss", False)
+        verbose_metrics = params.pop_bool("verbose_metrics", False)
+
+        initializer = InitializerApplicator.from_params(params.pop('initializer', []))
+        regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
+
+        return cls(vocab=vocab,
+                   text_field_embedder=text_field_embedder,
+                   citation_text_encoder=citation_text_encoder
+                   classifier_feedforward=classifier_feedforward,
+                   classifier_feedforward_2=classifier_feedforward_2,
+                   classifier_feedforward_3=classifier_feedforward_3,
+                   verbose_metrics=verbose_metrics,
+                   weighted_loss=weighted_loss,
+                   initializer=initializer,
+                   regularizer=regularizer)

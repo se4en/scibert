@@ -15,7 +15,7 @@ export DATASET_SIZE=$dataset_size
 
 CONFIG_FILE=allennlp_config/"$TASK""$with_finetuning""$with_multitask".json
 
-SEED=13270
+SEED=23489723
 PYTORCH_SEED=`expr $SEED / 10`
 NUMPY_SEED=`expr $PYTORCH_SEED / 10`
 export SEED=$SEED
@@ -33,6 +33,7 @@ export CUDA_DEVICE=0
 
 export GRAD_ACCUM_BATCH_SIZE=32
 export NUM_EPOCHS=5
-export LEARNING_RATE=0.00002
+export LEARNING_RATE=0.00005
 
-python scibert/training/train_local.py train_multitask_2 $CONFIG_FILE  --include-package scibert -s "$@"
+# python scibert/training/train_local.py train_multitask_2 $CONFIG_FILE  --include-package scibert -s "$@"
+python -m allennlp.run train $CONFIG_FILE  --include-package scibert -s "$@"

@@ -548,13 +548,13 @@ class MultiTaskTrainer2:
         else:
             logger.info("Training")
 
-        if epoch > self._unfreeze_epoch:
-            for param in self._model.text_field_embedder.parameters():
-                param.requires_grad = True
-                print(param.name)
-            logger.info("Unfreeze weights")
-            _parameters = [[n, p] for n, p in self._model.named_parameters() if p.requires_grad]
-            logger.info(f"Number of tunable parameters: {len(_parameters)}")
+        #if epoch > self._unfreeze_epoch:
+        #    for param in self._model.text_field_embedder.parameters():
+        #        param.requires_grad = True
+        #        print(param.name)
+        #    logger.info("Unfreeze weights")
+        #    _parameters = [[n, p] for n, p in self._model.named_parameters() if p.requires_grad]
+        #    logger.info(f"Number of tunable parameters: {len(_parameters)}")
 
         num_training_batches = self._iterator.get_num_batches(self._train_data)
         num_training_batches_aux = self._iterator_aux.get_num_batches(self._train_dataset_aux)
