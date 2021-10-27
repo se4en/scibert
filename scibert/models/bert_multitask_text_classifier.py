@@ -2,6 +2,7 @@ from typing import Dict, Optional, List, Any
 
 import numpy as np
 import torch
+from allennlp.common import Params
 import torch.nn.functional as F
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
@@ -28,6 +29,8 @@ class BertMultitaskTextClassifier(TextClassifier):
                  classifier_feedforward: FeedForward,
                  classifier_feedforward_2: FeedForward,
                  classifier_feedforward_3: FeedForward,
+                 is_scicite: bool = False,
+                 report_auxiliary_metrics: bool = False,
                  verbose_metrics: bool = False,
                  weighted_loss: bool = False,
                  dropout: float = 0.2,
@@ -60,9 +63,9 @@ class BertMultitaskTextClassifier(TextClassifier):
         self.classifier_feedforward_2 = classifier_feedforward_2
         self.classifier_feedforward_3 = classifier_feedforward_3
         
+        self.is_scicite = is_scicite
 
-
-        self.report_auxiliary_metrics = True
+        self.report_auxiliary_metrics = report_auxiliary_metrics
     
         self.label_accuracy = CategoricalAccuracy()
         self.label_f1_metrics = {}
@@ -84,7 +87,10 @@ class BertMultitaskTextClassifier(TextClassifier):
         self.weighted_loss = weighted_loss
 
         if self.weighted_loss:
-            weights = [0.32447342, 0.88873626, 0.92165242, 3.67613636, 4.49305556, 4.6884058]
+            if self.is_scicite:
+                weights = [0.57620915, 1.16465863, 2.46367091]
+            else:
+                weights = [0.32447342, 0.88873626, 0.92165242, 3.67613636, 4.49305556, 4.6884058]
             class_weights = torch.FloatTensor(weights)  # .cuda()
             self.loss_main_task = torch.nn.CrossEntropyLoss(weight=class_weights)
 
@@ -142,9 +148,11 @@ class BertMultitaskTextClassifier(TextClassifier):
 
 
             output_dict['logits'] = logits
-            
-            # loss = self.loss(logits, label)
-            loss = self.loss_main_task(logits, label)
+
+            if not self.weighted_loss:
+                loss = self.loss(logits, label)
+            else:
+                loss = self.loss_main_task(logits, label)
             output_dict["loss"] = loss
 
             # compute F1 per label
@@ -243,18 +251,24 @@ class BertMultitaskTextClassifier(TextClassifier):
         classifier_feedforward_2 = FeedForward.from_params(params.pop("classifier_feedforward_2"))
         classifier_feedforward_3 = FeedForward.from_params(params.pop("classifier_feedforward_3"))
 
+        report_auxiliary_metrics = params.pop_bool("report_auxiliary_metrics", False)
+
         weighted_loss = params.pop_bool("weighted_loss", False)
         verbose_metrics = params.pop_bool("verbose_metrics", False)
+
+        is_scicite = params.pop_bool("is_scicite", False)
 
         initializer = InitializerApplicator.from_params(params.pop('initializer', []))
         regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
 
         return cls(vocab=vocab,
-                   text_field_embedder=text_field_embedder,
-                   citation_text_encoder=citation_text_encoder
+                   text_field_embedder=text_field_embedder, 
+                   # citation_text_encoder=citation_text_encoder,
                    classifier_feedforward=classifier_feedforward,
                    classifier_feedforward_2=classifier_feedforward_2,
                    classifier_feedforward_3=classifier_feedforward_3,
+                   is_scicite=is_scicite,
+                   report_auxiliary_metrics=report_auxiliary_metrics, 
                    verbose_metrics=verbose_metrics,
                    weighted_loss=weighted_loss,
                    initializer=initializer,

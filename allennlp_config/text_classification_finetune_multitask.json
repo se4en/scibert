@@ -2,8 +2,8 @@
   "random_seed": std.parseInt(std.extVar("SEED")),
   "pytorch_seed": std.parseInt(std.extVar("PYTORCH_SEED")),
   "numpy_seed": std.parseInt(std.extVar("NUMPY_SEED")),
-  "mixing_ratio": 0.06,
-  "mixing_ratio2": 0.21,
+  "mixing_ratio": 0.1,
+  "mixing_ratio2": 0.15,
   "cutoff_epoch": 0,
   "unfreeze_epoch": -1,
   "dataset_reader": {
@@ -49,6 +49,8 @@
     "type": "bert_multitask_text_classifier",
     "verbose_metrics": true,
     "weighted_loss": true,
+    "is_scicite": false,
+    "report_auxiliary_metrics": false,
     "text_field_embedder": {
         "allow_unmatched_keys": true,
         "embedder_to_indexer_map": {
@@ -59,10 +61,10 @@
                 "type": "bert-pretrained",
                 "pretrained_model": std.extVar("BERT_WEIGHTS"),
                 "requires_grad": true,
-                "top_layer_only": false
+                "top_layer_only": true
             }
         }
-    }
+    },
     "classifier_feedforward": {
       "input_dim": 768,
       "num_layers": 1,
@@ -106,7 +108,7 @@
   "trainer": {
     "optimizer": {
         "type": "bert_adam",
-        "lr": 0.00002, // std.extVar("LEARNING_RATE"),
+        "lr": 0.00003, // std.extVar("LEARNING_RATE"),
         "parameter_groups": [
           /*[["text_field_embedder.token_embedder_bert.bert_model.encoder.layer.6", 
             "text_field_embedder.token_embedder_bert.bert_model.encoder.layer.7", 

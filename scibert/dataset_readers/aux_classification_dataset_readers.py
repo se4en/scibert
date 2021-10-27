@@ -43,7 +43,7 @@ class AclSectionTitleDatasetReader(DatasetReader):
                          section_name: str = None,
                          citing_paper_id: str = None,
                          cited_paper_id: str = None) -> Instance:  # type: ignore
-        text_tokens = self._tokenizer.tokenize(text)
+        text_tokens = self._tokenizer.tokenize(text) #, truncate_long_sequences=False)
         fields = {
             'text': TextField(text_tokens, self._token_indexers),
         }
@@ -83,7 +83,7 @@ class AclCiteWorthinessDatasetReader(DatasetReader):
                          is_citation: bool = None,
                          citing_paper_id: str = None,
                          cited_paper_id: str = None) -> Instance:  # type: ignore
-        text_tokens = self._tokenizer.tokenize(text)
+        text_tokens = self._tokenizer.tokenize(text) #, truncate_long_sequences=False)
         fields = {
             'text': TextField(text_tokens, self._token_indexers),
         }
