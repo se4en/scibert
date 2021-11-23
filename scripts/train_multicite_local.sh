@@ -30,10 +30,10 @@ export TEST_PATH=data/$TASK/$DATASET/test.jsonl
 # export AUX_PATH=data/$TASK/$DATASET/scaffolds/cite-sections.jsonl
 # export AUX_2_PATH=data/$TASK/$DATASET/scaffolds/cite-worthiness.jsonl
 
-export CUDA_DEVICE=-1
+export CUDA_DEVICE=0
 
-export GRAD_ACCUM_BATCH_SIZE=32
-export NUM_EPOCHS=5
+export GRAD_ACCUM_BATCH_SIZE=8
+export NUM_EPOCHS=3
 export LEARNING_RATE=0.0001
 
 python -m allennlp.run train $CONFIG_FILE  --include-package scibert -s "$@"

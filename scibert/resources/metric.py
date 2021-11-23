@@ -1,14 +1,14 @@
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Iterable
 
 import torch
 from allennlp.common.checks import ConfigurationError
-from allennlp.training.metrics import FBetaMeasure
+from allennlp.training.metrics import F1Measure#, FBetaMeasure
 from allennlp.training.metrics.metric import Metric
 from overrides import overrides
 
 
 @Metric.register("fbeta_multi_label")
-class FBetaMeasureMultiLabel(FBetaMeasure):
+class FBetaMeasureMultiLabel(F1Measure):
     """Compute precision, recall, F-measure and support for each class.
     The precision is the ratio `tp / (tp + fp)` where `tp` is the number of
     true positives and `fp` the number of false positives. The precision is
@@ -52,7 +52,10 @@ class FBetaMeasureMultiLabel(FBetaMeasure):
     """
 
     def __init__(self, beta: float = 1.0, average: str = None, labels: List[int] = None, threshold: float = 0.5) -> None:
-        super().__init__(beta, average, labels)
+        if labels is not None:
+            super().__init__(len(labels))
+        else:
+            super().__init__(0)
         average_options = {None, "micro", "macro", "weighted"}
         if average not in average_options:
             raise ConfigurationError(f"`average` has to be one of {average_options}.")
@@ -137,3 +140,14 @@ class FBetaMeasureMultiLabel(FBetaMeasure):
         self._pred_sum += pred_sum
         self._true_sum += true_sum
         self._total_sum += mask.sum().to(torch.float)
+
+    @staticmethod
+    def detach_tensors(*tensors: torch.Tensor) -> Iterable[torch.Tensor]:
+        """
+        If you actually passed gradient-tracking Tensors to a Metric, there will be
+        a huge memory leak, because it will prevent garbage collection for the computation
+        graph. This method ensures the tensors are detached.
+        """
+        # Check if it's actually a tensor in case something else was passed.
+        return (x.detach() if isinstance(x, torch.Tensor) else x for x in tensors)
+

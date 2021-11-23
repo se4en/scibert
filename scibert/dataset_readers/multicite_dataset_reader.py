@@ -43,6 +43,9 @@ class MulticiteDatasetReader(DatasetReader):
                          labels: List[str] = None,
                          metadata: Any = None) -> Instance:  # type: ignore
         text_tokens = self._tokenizer.tokenize(text)
+
+        # print("Text token=", len(text_tokens), text_tokens)
+
         fields = {
             'text': TextField(text_tokens, self._token_indexers),
         }

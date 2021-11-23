@@ -19,7 +19,7 @@
   "evaluate_on_test": true,
   "model": {
     "type": "bert_multilabel_text_classifier",
-    "verbose_metrics": true,
+    "verbose_metrics": false,
     "text_field_embedder": {
         "allow_unmatched_keys": true,
         "embedder_to_indexer_map": {
@@ -44,9 +44,9 @@
   "trainer": {
     "optimizer": {
         "type": "bert_adam",
-        "lr": std.extVar("LEARNING_RATE")
+        "lr": 0.00003, //std.extVar("LEARNING_RATE")
     },
-    "validation_metric": "+average_F1",
+    "validation_metric": "-loss", //  "+average_F1",
     "num_serialized_models_to_keep": 3,
     "num_epochs": std.parseInt(std.extVar("NUM_EPOCHS")),
     "should_log_learning_rate": true,
